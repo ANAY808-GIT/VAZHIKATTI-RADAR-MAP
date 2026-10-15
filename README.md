@@ -67,7 +67,7 @@ No package installation or API key is required for the current demo.
 
 Example:
 
-`https://YOUR-USERNAME.github.io/vazhikatti-2.0/`
+`https://ANAY808-git.github.io/vazhikatti-2.0/`
 
 ## 🧩 JavaScript Events Used
 
