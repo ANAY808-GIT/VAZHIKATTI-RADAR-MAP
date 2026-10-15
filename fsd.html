@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="VAZHIKATTI 2.0 — Dark Mode Smart Essential Places Finder powered by OpenStreetMap, Geolocation, and Overpass APIs." />
+  <title>VAZHIKATTI 2.0 — Smart Essential Places Finder</title>
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              200: '#a7f3d0',
+              300: '#6ee7b7',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+              950: '#022c22',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet Map Styles & Scripts -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Custom Tailwind & Map Design Stylesheet -->
+  <link rel="stylesheet" href="tailwind.css" />
+</head>
+
+<body class="bg-slate-100 text-slate-800 dark:bg-[#070b14] dark:text-slate-100 antialiased selection:bg-brand-500 selection:text-white min-h-screen flex flex-col relative overflow-x-hidden transition-colors duration-300">
+
+  <!-- Ambient Dark Mode Glow Gradients -->
+  <div class="pointer-events-none fixed -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-emerald-500/10 blur-[120px] dark:bg-emerald-600/15"></div>
+  <div class="pointer-events-none fixed top-1/2 -right-40 h-[600px] w-[600px] rounded-full bg-cyan-500/10 blur-[140px] dark:bg-cyan-600/15"></div>
+
+  <!-- ================= TOP NAVIGATION BAR ================= -->
+  <header class="sticky top-0 z-40 border-b border-slate-200/90 dark:border-slate-800/80 glass-panel shadow-sm transition-colors">
+    <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+      
+      <!-- Brand Logo & Title -->
+      <div class="flex items-center gap-3">
+        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-brand-600 via-teal-500 to-emerald-400 text-white shadow-md shadow-brand-500/25">
+          <span class="text-2xl">🧭</span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
+              VAZHIKATTI <span class="text-brand-500 font-mono text-lg font-bold">2.0</span>
+            </h1>
+            <span class="hidden rounded-full bg-brand-100 dark:bg-brand-950/80 border border-brand-300 dark:border-brand-800 px-2.5 py-0.5 text-xs font-semibold text-brand-700 dark:text-brand-300 sm:inline-block">
+              வழிகாட்டி
+            </span>
+          </div>
+          <p class="text-xs font-medium text-slate-500 dark:text-slate-400">
+            Real-Time Essential Places Navigator &amp; Live Map
+          </p>
+        </div>
+      </div>
+
+      <!-- Header Action Controls -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        
+        <!-- Live API Status Indicator -->
+        <div class="hidden items-center gap-1.5 rounded-full border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 md:flex">
+          <span class="relative flex h-2 w-2">
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+          </span>
+          <span id="apiStatusText">Live OSM API</span>
+        </div>
+
+        <!-- Add Place Button (Triggers Validated Form Modal) -->
+        <button id="openAddModalBtn" type="button" class="flex items-center gap-1.5 rounded-xl border border-brand-500/30 bg-brand-500/10 dark:bg-brand-500/20 px-3 py-2 text-xs sm:text-sm font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-500/20 dark:hover:bg-brand-500/30 transition active:scale-95">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          <span class="hidden sm:inline">Add Place</span>
+          <span class="sm:hidden">Add</span>
+        </button>
+
+        <!-- Locate Me Button -->
+        <button id="locateBtn" type="button" class="group flex items-center gap-1.5 sm:gap-2 rounded-xl bg-brand-600 px-3 py-2 sm:px-3.5 text-xs sm:text-sm font-semibold text-white shadow-sm shadow-brand-600/30 transition-all hover:bg-brand-700 hover:shadow-md hover:shadow-brand-600/40 active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900">
+          <svg class="h-4 w-4 transition-transform group-hover:scale-110 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+          <span class="hidden sm:inline">Locate Me</span>
+        </button>
+
+        <!-- Dark / Light Theme Toggle Button -->
+        <button id="themeToggleBtn" type="button" class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-amber-400 shadow-sm transition hover:scale-105 active:scale-95 focus:outline-none" title="Toggle Theme (Dark / Light)">
+          <!-- Sun icon (shown in dark mode) -->
+          <svg id="themeIconSun" class="h-5 w-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          </svg>
+          <!-- Moon icon (shown in light mode) -->
+          <svg id="themeIconMoon" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+          </svg>
+        </button>
+
+        <!-- Map Layer Switcher -->
+        <select id="layerSelect" class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-2.5 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 shadow-sm transition hover:border-slate-300 dark:hover:border-slate-700 focus:border-brand-500 focus:outline-none">
+          <option value="dark" selected>🌙 Dark Map</option>
+          <option value="streets">🗺️ Clean Streets</option>
+          <option value="satellite">🛰️ Satellite View</option>
+          <option value="osm">🌍 OSM Standard</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN APP LAYOUT ================= -->
+  <main class="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 p-4 sm:p-6 z-10">
+
+    <!-- USER SEARCH FORM WITH REAL-TIME VALIDATION & FEEDBACK -->
+    <section class="glass-card rounded-2xl p-4 sm:p-5 shadow-sm transition-all">
+      <form id="searchForm" class="flex flex-col gap-3">
+        <div class="flex flex-col gap-3 sm:flex-row">
+          
+          <!-- Search Input with Live Validation Wrapper -->
+          <div class="relative flex-1">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 dark:text-slate-500">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+            </div>
+            
+            <input 
+              type="text" 
+              id="searchInput"
+              maxlength="60"
+              class="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/90 py-3 pl-11 pr-24 text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 shadow-inner transition focus:border-brand-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              placeholder="Search city, neighborhood, or landmark (e.g., Chennai, Coimbatore, Apollo Hospital...)"
+            />
+
+            <!-- Character counter & Clear button -->
+            <div class="absolute inset-y-0 right-0 flex items-center pr-3 gap-2">
+              <span id="searchCharCount" class="text-[10px] font-mono text-slate-400 dark:text-slate-500">0/60</span>
+              <button type="button" id="clearSearchBtn" class="hidden text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Radius Selector -->
+          <div class="flex items-center gap-2">
+            <label for="radiusSelect" class="text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">Radius:</label>
+            <select id="radiusSelect" class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-3 text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm transition hover:border-slate-300 dark:hover:border-slate-700 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+              <option value="1500">1.5 km</option>
+              <option value="3000" selected>3.0 km</option>
+              <option value="5000">5.0 km</option>
+              <option value="10000">10 km</option>
+            </select>
+          </div>
+
+          <!-- Search Button with Loading State -->
+          <button 
+            type="submit" 
+            id="searchSubmitBtn"
+            class="flex items-center justify-center gap-2 rounded-xl bg-slate-900 dark:bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 dark:hover:bg-brand-700 active:scale-95 disabled:opacity-50"
+          >
+            <span id="searchBtnSpinner" class="hidden h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+            <span id="searchBtnText">Search</span>
+            <svg id="searchBtnIcon" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Inline Form Validation Message -->
+        <div id="searchValidationMsg" class="hidden text-xs font-medium text-rose-500 dark:text-rose-400 flex items-center gap-1.5 pl-1">
+          <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+          </svg>
+          <span id="searchValidationText">Please enter at least 2 characters to search.</span>
+        </div>
+      </form>
+
+      <!-- Quick Location Presets -->
+      <div class="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+        <span class="font-semibold text-slate-600 dark:text-slate-300">Quick Jump:</span>
+        <button type="button" class="city-chip rounded-lg bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 font-medium hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-950 dark:hover:text-brand-300 transition" data-city="Chennai">Chennai</button>
+        <button type="button" class="city-chip rounded-lg bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 font-medium hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-950 dark:hover:text-brand-300 transition" data-city="Coimbatore">Coimbatore</button>
+        <button type="button" class="city-chip rounded-lg bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 font-medium hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-950 dark:hover:text-brand-300 transition" data-city="Madurai">Madurai</button>
+        <button type="button" class="city-chip rounded-lg bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 font-medium hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-950 dark:hover:text-brand-300 transition" data-city="Bangalore">Bangalore</button>
+        <button type="button" class="city-chip rounded-lg bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 font-medium hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-950 dark:hover:text-brand-300 transition" data-city="Mumbai">Mumbai</button>
+        <button type="button" class="city-chip rounded-lg bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 font-medium hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-950 dark:hover:text-brand-300 transition" data-city="Delhi">Delhi</button>
+      </div>
+    </section>
+
+    <!-- QUICK FINDER CATEGORIES -->
+    <section>
+      <div class="mb-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-100 dark:bg-brand-950/80 text-brand-700 dark:text-brand-400 text-xs font-bold">⚡</span>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white">Essential Categories</h2>
+        </div>
+        <span class="text-xs font-medium text-slate-500 dark:text-slate-400" id="categorySubtitle">Click a category to fetch nearby live places</span>
+      </div>
+
+      <!-- Categories 6-Grid with Dark Mode Accents -->
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6" id="categoryGrid">
+        
+        <!-- Hospitals -->
+        <button type="button" data-type="hospital" class="cat-btn group flex flex-col items-start justify-between rounded-2xl border-2 border-transparent bg-white dark:bg-slate-900/90 p-4 shadow-sm hover:border-red-500/50 hover:shadow-md transition text-left">
+          <div class="flex w-full items-center justify-between">
+            <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 dark:bg-red-950/60 text-2xl group-hover:scale-110 transition-transform">🏥</span>
+            <span class="count-badge hidden rounded-full bg-red-100 dark:bg-red-950/80 px-2 py-0.5 text-[10px] font-bold text-red-700 dark:text-red-400">0</span>
+          </div>
+          <div class="mt-3">
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-red-500 transition-colors">Hospitals</h3>
+            <p class="text-[11px] font-medium text-slate-400 dark:text-slate-500">Emergency &amp; Care</p>
+          </div>
+        </button>
+
+        <!-- Public Toilets -->
+        <button type="button" data-type="toilet" class="cat-btn group flex flex-col items-start justify-between rounded-2xl border-2 border-transparent bg-white dark:bg-slate-900/90 p-4 shadow-sm hover:border-cyan-500/50 hover:shadow-md transition text-left">
+          <div class="flex w-full items-center justify-between">
+            <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-50 dark:bg-cyan-950/60 text-2xl group-hover:scale-110 transition-transform">🚻</span>
+            <span class="count-badge hidden rounded-full bg-cyan-100 dark:bg-cyan-950/80 px-2 py-0.5 text-[10px] font-bold text-cyan-700 dark:text-cyan-400">0</span>
+          </div>
+          <div class="mt-3">
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-cyan-400 transition-colors">Public Toilets</h3>
+            <p class="text-[11px] font-medium text-slate-400 dark:text-slate-500">Restrooms &amp; Wash</p>
+          </div>
+        </button>
+
+        <!-- Hotels -->
+        <button type="button" data-type="hotel" class="cat-btn group flex flex-col items-start justify-between rounded-2xl border-2 border-transparent bg-white dark:bg-slate-900/90 p-4 shadow-sm hover:border-indigo-500/50 hover:shadow-md transition text-left">
+          <div class="flex w-full items-center justify-between">
+            <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-2xl group-hover:scale-110 transition-transform">🏨</span>
+            <span class="count-badge hidden rounded-full bg-indigo-100 dark:bg-indigo-950/80 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-400">0</span>
+          </div>
+          <div class="mt-3">
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-400 transition-colors">Hotels</h3>
+            <p class="text-[11px] font-medium text-slate-400 dark:text-slate-500">Stays &amp; Lodging</p>
+          </div>
+        </button>
+
+        <!-- Pharmacies -->
+        <button type="button" data-type="pharmacy" class="cat-btn group flex flex-col items-start justify-between rounded-2xl border-2 border-transparent bg-white dark:bg-slate-900/90 p-4 shadow-sm hover:border-emerald-500/50 hover:shadow-md transition text-left">
+          <div class="flex w-full items-center justify-between">
+            <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-2xl group-hover:scale-110 transition-transform">💊</span>
+            <span class="count-badge hidden rounded-full bg-emerald-100 dark:bg-emerald-950/80 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">0</span>
+          </div>
+          <div class="mt-3">
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-400 transition-colors">Pharmacies</h3>
+            <p class="text-[11px] font-medium text-slate-400 dark:text-slate-500">24/7 Medicals</p>
+          </div>
+        </button>
+
+        <!-- ATMs -->
+        <button type="button" data-type="atm" class="cat-btn group flex flex-col items-start justify-between rounded-2xl border-2 border-transparent bg-white dark:bg-slate-900/90 p-4 shadow-sm hover:border-blue-500/50 hover:shadow-md transition text-left">
+          <div class="flex w-full items-center justify-between">
+            <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/60 text-2xl group-hover:scale-110 transition-transform">🏧</span>
+            <span class="count-badge hidden rounded-full bg-blue-100 dark:bg-blue-950/80 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-400">0</span>
+          </div>
+          <div class="mt-3">
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-400 transition-colors">ATMs &amp; Banks</h3>
+            <p class="text-[11px] font-medium text-slate-400 dark:text-slate-500">Cash Points</p>
+          </div>
+        </button>
+
+        <!-- Restaurants -->
+        <button type="button" data-type="restaurant" class="cat-btn group flex flex-col items-start justify-between rounded-2xl border-2 border-transparent bg-white dark:bg-slate-900/90 p-4 shadow-sm hover:border-amber-500/50 hover:shadow-md transition text-left">
+          <div class="flex w-full items-center justify-between">
+            <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-950/60 text-2xl group-hover:scale-110 transition-transform">🍽️</span>
+            <span class="count-badge hidden rounded-full bg-amber-100 dark:bg-amber-950/80 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400">0</span>
+          </div>
+          <div class="mt-3">
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-400 transition-colors">Restaurants</h3>
+            <p class="text-[11px] font-medium text-slate-400 dark:text-slate-500">Food &amp; Dining</p>
+          </div>
+        </button>
+
+      </div>
+    </section>
+
+    <!-- ================= SPLIT VIEW: INTERACTIVE MAP & PLACES LIST ================= -->
+    <div class="grid grid-cols-1 gap-5 lg:grid-cols-12 items-start">
+      
+      <!-- MAP CONTAINER (7 cols on large screens) -->
+      <section class="lg:col-span-7 flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-400 text-xs font-bold">🗺️</span>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">Interactive Map</h2>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+            <span id="mapCenterLabel" class="truncate max-w-[220px]">Detecting location...</span>
+          </div>
+        </div>
+
+        <div class="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-950 shadow-md h-[460px] sm:h-[520px] lg:h-[580px]">
+          <!-- Real Leaflet Map -->
+          <div id="map" class="h-full w-full"></div>
+
+          <!-- Floating Map Overlay Banner -->
+          <div class="pointer-events-none absolute top-4 left-4 right-4 z-20 flex justify-between gap-2">
+            <div id="activeCategoryPill" class="hidden pointer-events-auto items-center gap-2 rounded-xl bg-white/95 dark:bg-slate-900/95 px-3.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 shadow-lg backdrop-blur-md border border-slate-200 dark:border-slate-700">
+              <span id="activePillIcon">🏥</span>
+              <span id="activePillText">Hospitals</span>
+              <button id="resetCategoryBtn" class="ml-1 text-slate-400 hover:text-slate-700 dark:hover:text-white">×</button>
+            </div>
+            
+            <button id="searchHereBtn" class="hidden pointer-events-auto ml-auto items-center gap-1.5 rounded-xl bg-brand-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-lg transition hover:bg-brand-700 active:scale-95">
+              <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              <span>Scan this Map Area</span>
+            </button>
+          </div>
+
+          <!-- Map Loading Indicator -->
+          <div id="mapLoader" class="hidden absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/50 backdrop-blur-xs">
+            <div class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-2xl flex flex-col items-center gap-3">
+              <div class="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent"></div>
+              <p class="text-xs font-semibold text-slate-700 dark:text-slate-300" id="mapLoaderText">Fetching places via OpenStreetMap API...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RESULTS SIDEBAR (5 cols on large screens) -->
+      <section class="lg:col-span-5 flex flex-col gap-3">
+        
+        <!-- Header Info -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 text-xs font-bold">📍</span>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">Found Places</h2>
+          </div>
+          <span id="resultCountBadge" class="rounded-full bg-slate-200 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+            0 places
+          </span>
+        </div>
+
+        <!-- Status & Filter Description Card -->
+        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-3.5 shadow-sm text-xs text-slate-600 dark:text-slate-300 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <div id="statusPulse" class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+            <span id="statusMessage">Select a category above or search a location.</span>
+          </div>
+          <button id="showAllBtn" class="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline hidden whitespace-nowrap">
+            Show All
+          </button>
+        </div>
+
+        <!-- Selected Place Spotlight Card -->
+        <div id="selectedSpotlight" class="hidden rounded-2xl border-2 border-brand-500 bg-gradient-to-br from-brand-50/90 to-teal-50/50 dark:from-brand-950/40 dark:to-slate-900/90 p-4 shadow-md transition-all">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <span id="spotlightIcon" class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white dark:bg-slate-800 text-2xl shadow-sm">🏥</span>
+              <div>
+                <span id="spotlightCategory" class="rounded-md bg-brand-100 dark:bg-brand-900/60 px-2 py-0.5 text-[10px] font-bold text-brand-800 dark:text-brand-300 uppercase tracking-wider">Hospital</span>
+                <h3 id="spotlightName" class="text-base font-bold text-slate-900 dark:text-white">Place Name</h3>
+              </div>
+            </div>
+            <button id="closeSpotlightBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg leading-none">×</button>
+          </div>
+
+          <p id="spotlightAddress" class="mt-2 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            Detailed address will be shown here.
+          </p>
+
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <span id="spotlightDistance" class="rounded-lg bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs border border-slate-200/60 dark:border-slate-700">
+              📏 0.0 km away
+            </span>
+            <a id="spotlightRouteBtn" href="#" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 transition">
+              <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+              </svg>
+              <span>Turn-by-Turn Navigation</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Scrollable Places Cards List (with Skeletons & Empty States) -->
+        <div id="placesList" class="flex flex-col gap-2.5 max-h-[500px] sm:max-h-[540px] overflow-y-auto pr-1">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+      </section>
+
+    </div>
+
+    <!-- API & INFORMATION FOOTER BANNER -->
+    <section class="mt-6 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 p-6 text-white shadow-lg border border-slate-800">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 class="text-lg font-bold flex items-center gap-2 text-white">
+            <span>⚡</span> Real-Time Open Data Architecture
+          </h3>
+          <p class="mt-1 text-xs text-slate-300 max-w-2xl leading-relaxed">
+            VAZHIKATTI 2.0 connects directly with <strong>OpenStreetMap Nominatim Geocoding API</strong> for high-precision search &amp; reverse geocoding, <strong>Overpass API</strong> for dynamic spatial POI querying, and <strong>W3C Geolocation API</strong> for accurate GPS triangulation.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="rounded-xl bg-white/10 px-3 py-1.5 font-mono text-emerald-400">Leaflet v1.9.4</span>
+          <span class="rounded-xl bg-white/10 px-3 py-1.5 font-mono text-cyan-400">Tailwind CSS</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= USER INPUT MODAL FORM: "SUGGEST / ADD A PLACE" ================= -->
+  <div id="addPlaceModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay overflow-y-auto">
+    <div class="relative w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl transition-all my-8">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500/20 text-brand-600 dark:text-brand-400">
+            <span class="text-xl">📍</span>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">Add Essential Place</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Contribute a new community verified place</p>
+          </div>
+        </div>
+        <button id="closeAddModalBtn" type="button" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Validated Form -->
+      <form id="addPlaceForm" class="mt-4 flex flex-col gap-4" novalidate>
+        
+        <!-- Field 1: Place Name -->
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label for="newPlaceName" class="text-xs font-bold text-slate-700 dark:text-slate-300">Place Name <span class="text-rose-500">*</span></label>
+            <span id="nameCount" class="text-[10px] font-mono text-slate-400">0/60</span>
+          </div>
+          <input 
+            type="text" 
+            id="newPlaceName" 
+            maxlength="60"
+            required
+            placeholder="e.g., City Medicos Pharmacy" 
+            class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition"
+          />
+          <p id="nameError" class="hidden mt-1 text-[11px] font-medium text-rose-500">Place name must be at least 3 characters.</p>
+        </div>
+
+        <!-- Field 2: Category Dropdown -->
+        <div>
+          <label for="newPlaceCategory" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Category <span class="text-rose-500">*</span></label>
+          <select 
+            id="newPlaceCategory" 
+            required 
+            class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition"
+          >
+            <option value="">Select a category...</option>
+            <option value="hospital">🏥 Hospital / Emergency Clinic</option>
+            <option value="toilet">🚻 Public Toilet / Restroom</option>
+            <option value="hotel">🏨 Hotel / Guest House</option>
+            <option value="pharmacy">💊 Pharmacy / Chemist</option>
+            <option value="atm">🏧 ATM / Bank Cash Point</option>
+            <option value="restaurant">🍽️ Restaurant / Cafe</option>
+          </select>
+          <p id="categoryError" class="hidden mt-1 text-[11px] font-medium text-rose-500">Please choose a category.</p>
+        </div>
+
+        <!-- Field 3: Address -->
+        <div>
+          <label for="newPlaceAddress" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Street Address / Locality <span class="text-rose-500">*</span></label>
+          <input 
+            type="text" 
+            id="newPlaceAddress" 
+            required
+            placeholder="e.g., 42 Gandhi Road, Near Metro Gate 2" 
+            class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition"
+          />
+          <p id="addressError" class="hidden mt-1 text-[11px] font-medium text-rose-500">Please provide a valid street address (min 5 characters).</p>
+        </div>
+
+        <!-- Field 4: Coordinates (Lat / Lon) with Auto-Fill helper -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-xs font-bold text-slate-700 dark:text-slate-300">Coordinates (Lat, Lon) <span class="text-rose-500">*</span></label>
+            <button type="button" id="useMapCenterBtn" class="text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:underline">
+              📍 Use Map Center
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <input 
+              type="number" 
+              step="any" 
+              id="newPlaceLat" 
+              placeholder="Latitude (e.g. 13.082)" 
+              required
+              class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3.5 py-2 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition"
+            />
+            <input 
+              type="number" 
+              step="any" 
+              id="newPlaceLon" 
+              placeholder="Longitude (e.g. 80.270)" 
+              required
+              class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3.5 py-2 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition"
+            />
+          </div>
+          <p id="coordsError" class="hidden mt-1 text-[11px] font-medium text-rose-500">Valid numeric latitude (-90 to 90) and longitude (-180 to 180) are required.</p>
+        </div>
+
+        <!-- Field 5: Contact / Hotline (Optional with format validation) -->
+        <div>
+          <label for="newPlacePhone" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Contact Phone (Optional)</label>
+          <input 
+            type="tel" 
+            id="newPlacePhone" 
+            placeholder="e.g., +91 98765 43210" 
+            class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3.5 py-2 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition"
+          />
+          <p id="phoneError" class="hidden mt-1 text-[11px] font-medium text-rose-500">Enter a valid phone number (digits, +, hyphens).</p>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="mt-2 flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <button type="button" id="cancelAddBtn" class="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            Cancel
+          </button>
+          <button type="submit" id="submitPlaceBtn" class="flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-brand-700 transition active:scale-95 disabled:opacity-50">
+            <span id="submitSpinner" class="hidden h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+            <span>Publish Place</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= TOAST NOTIFICATION CONTAINER ================= -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="mt-auto border-t border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/90 py-6 text-center text-xs text-slate-500 dark:text-slate-400 transition-colors">
+    <div class="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-800 dark:text-slate-200">VAZHIKATTI 2.0 (வழிகாட்டி)</span>
+        <span>•</span>
+        <span>Your Essential Places Finder</span>
+      </div>
+      <div>
+        <span>Map Data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" class="font-medium text-brand-500 underline">OpenStreetMap</a> &amp; Esri contributors</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================= SCRIPT LOGIC ================= -->
+  <script>
+    /* ==========================================================================
+       VAZHIKATTI 2.0 - Core Engine
+       Features:
+       - Dark & Light Theme Switcher with persistence & auto map styling
+       - Leaflet Map (Esri Dark Canvas / Esri Clean Streets / Satellite / OSM)
+       - Nominatim Geocoding API & Reverse Geocoding
+       - Overpass API POI Amenities Fetching
+       - HTML5 Geolocation API + IP Geolocation Fallback
+       - Real-time Form Validation & Toast Notification System
+       - User Input "Add Place" Modal with Live Verification & Map Plotting
+       - Shimmer Skeletons, Error Retry Handling, and Empty States
+       ========================================================================== */
+
+    // Category Configuration
+    const CATEGORIES = {
+      hospital: {
+        id: "hospital",
+        name: "Hospitals",
+        icon: "🏥",
+        color: "#ef4444", // Red
+        overpassQuery: '["amenity"~"hospital|clinic"]',
+        nominatimQuery: "hospital"
+      },
+      toilet: {
+        id: "toilet",
+        name: "Public Toilets",
+        icon: "🚻",
+        color: "#06b6d4", // Cyan
+        overpassQuery: '["amenity"="toilets"]',
+        nominatimQuery: "public toilet"
+      },
+      hotel: {
+        id: "hotel",
+        name: "Hotels",
+        icon: "🏨",
+        color: "#6366f1", // Indigo
+        overpassQuery: '["tourism"~"hotel|guest_house|motel|hostel"]',
+        nominatimQuery: "hotel"
+      },
+      pharmacy: {
+        id: "pharmacy",
+        name: "Pharmacies",
+        icon: "💊",
+        color: "#10b981", // Emerald
+        overpassQuery: '["amenity"="pharmacy"]',
+        nominatimQuery: "pharmacy"
+      },
+      atm: {
+        id: "atm",
+        name: "ATMs & Banks",
+        icon: "🏧",
+        color: "#3b82f6", // Blue
+        overpassQuery: '["amenity"~"atm|bank"]',
+        nominatimQuery: "atm bank"
+      },
+      restaurant: {
+        id: "restaurant",
+        name: "Restaurants",
+        icon: "🍽️",
+        color: "#f59e0b", // Amber
+        overpassQuery: '["amenity"~"restaurant|cafe|fast_food"]',
+        nominatimQuery: "restaurant"
+      }
+    };
+
+    // Curated High-Reliability Fallback places
+    const SEED_PLACES = [
+      {
+        id: "seed-1",
+        name: "Rajiv Gandhi Government General Hospital",
+        type: "hospital",
+        lat: 13.0806,
+        lon: 80.2773,
+        address: "General Hospital Road, Park Town, Chennai, Tamil Nadu"
+      },
+      {
+        id: "seed-2",
+        name: "Apollo Hospital Main Branch",
+        type: "hospital",
+        lat: 13.0601,
+        lon: 80.2505,
+        address: "21 Greams Lane, Thousand Lights, Chennai, Tamil Nadu"
+      },
+      {
+        id: "seed-3",
+        name: "Central Railway Station Public Toilet",
+        type: "toilet",
+        lat: 13.0827,
+        lon: 80.2755,
+        address: "Near Central Metro Concourse, Chennai, Tamil Nadu"
+      },
+      {
+        id: "seed-4",
+        name: "Marina Beach Sanitation Facility",
+        type: "toilet",
+        lat: 13.0500,
+        lon: 80.2824,
+        address: "Kamarajar Promenade, Triplicane, Chennai, Tamil Nadu"
+      },
+      {
+        id: "seed-5",
+        name: "Taj Connemara Hotel",
+        type: "hotel",
+        lat: 13.0607,
+        lon: 80.2608,
+        address: "Binny Road, Anna Salai, Chennai, Tamil Nadu"
+      },
+      {
+        id: "seed-6",
+        name: "The Residency Towers",
+        type: "hotel",
+        lat: 13.0416,
+        lon: 80.2412,
+        address: "Sir Thyagaraya Rd, T. Nagar, Chennai, Tamil Nadu"
+      },
+      {
+        id: "seed-7",
+        name: "Apollo Pharmacy 24x7",
+        type: "pharmacy",
+        lat: 13.0838,
+        lon: 80.2709,
+        address: "Poonamallee High Road, Periamet, Chennai, Tamil Nadu"
+      },
+      {
+        id: "seed-8",
+        name: "MedPlus Chemist & Druggist",
+        type: "pharmacy",
+        lat: 13.0580,
+        lon: 80.2570,
+        address: "Mount Road, Thousand Lights, Chennai, Tamil Nadu"
+      },
+      {
+        id: "seed-9",
+        name: "State Bank of India (SBI) 24hr ATM",
+        type: "atm",
+        lat: 13.0820,
+        lon: 80.2740,
+        address: "Station Road, Chennai Central, Tamil Nadu"
+      },
+      {
+        id: "seed-10",
+        name: "HDFC Bank ATM & Cash Deposit",
+        type: "atm",
+        lat: 13.0595,
+        lon: 80.2520,
+        address: "Greams Road, Thousand Lights, Chennai, Tamil Nadu"
+      },
+      {
+        id: "seed-11",
+        name: "Saravana Bhavan Traditional Restaurant",
+        type: "restaurant",
+        lat: 13.0588,
+        lon: 80.2592,
+        address: "Peters Road, Thousand Lights, Chennai, Tamil Nadu"
+      },
+      {
+        id: "seed-12",
+        name: "Murugan Idli Shop",
+        type: "restaurant",
+        lat: 13.0401,
+        lon: 80.2330,
+        address: "G.N. Chetty Road, T. Nagar, Chennai, Tamil Nadu"
+      }
+    ];
+
+    // State Variables
+    let map = null;
+    let markersLayerGroup = null;
+    let userMarker = null;
+    let searchRadiusCircle = null;
+    let currentTileLayer = null;
+    let currentPlaces = [];
+    let activeCategory = null;
+    let userLocation = [13.0827, 80.2707];
+    let currentCenter = [13.0827, 80.2707];
+    let isFetching = false;
+    let lastQueryError = null;
+
+    // DOM Elements
+    const searchForm = document.getElementById("searchForm");
+    const searchInput = document.getElementById("searchInput");
+    const searchCharCount = document.getElementById("searchCharCount");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    const searchValidationMsg = document.getElementById("searchValidationMsg");
+    const searchValidationText = document.getElementById("searchValidationText");
+    const searchSubmitBtn = document.getElementById("searchSubmitBtn");
+    const searchBtnSpinner = document.getElementById("searchBtnSpinner");
+    const searchBtnIcon = document.getElementById("searchBtnIcon");
+    const searchBtnText = document.getElementById("searchBtnText");
+    const radiusSelect = document.getElementById("radiusSelect");
+    const layerSelect = document.getElementById("layerSelect");
+    const locateBtn = document.getElementById("locateBtn");
+    const placesList = document.getElementById("placesList");
+    const resultCountBadge = document.getElementById("resultCountBadge");
+    const statusMessage = document.getElementById("statusMessage");
+    const statusPulse = document.getElementById("statusPulse");
+    const mapCenterLabel = document.getElementById("mapCenterLabel");
+    const activeCategoryPill = document.getElementById("activeCategoryPill");
+    const activePillIcon = document.getElementById("activePillIcon");
+    const activePillText = document.getElementById("activePillText");
+    const resetCategoryBtn = document.getElementById("resetCategoryBtn");
+    const searchHereBtn = document.getElementById("searchHereBtn");
+    const showAllBtn = document.getElementById("showAllBtn");
+    const mapLoader = document.getElementById("mapLoader");
+    const mapLoaderText = document.getElementById("mapLoaderText");
+    const spotlight = document.getElementById("selectedSpotlight");
+    const spotlightIcon = document.getElementById("spotlightIcon");
+    const spotlightCategory = document.getElementById("spotlightCategory");
+    const spotlightName = document.getElementById("spotlightName");
+    const spotlightAddress = document.getElementById("spotlightAddress");
+    const spotlightDistance = document.getElementById("spotlightDistance");
+    const spotlightRouteBtn = document.getElementById("spotlightRouteBtn");
+    const closeSpotlightBtn = document.getElementById("closeSpotlightBtn");
+    const themeToggleBtn = document.getElementById("themeToggleBtn");
+    const themeIconSun = document.getElementById("themeIconSun");
+    const themeIconMoon = document.getElementById("themeIconMoon");
+
+    // Modal DOM Elements
+    const openAddModalBtn = document.getElementById("openAddModalBtn");
+    const addPlaceModal = document.getElementById("addPlaceModal");
+    const closeAddModalBtn = document.getElementById("closeAddModalBtn");
+    const cancelAddBtn = document.getElementById("cancelAddBtn");
+    const addPlaceForm = document.getElementById("addPlaceForm");
+    const newPlaceName = document.getElementById("newPlaceName");
+    const newPlaceCategory = document.getElementById("newPlaceCategory");
+    const newPlaceAddress = document.getElementById("newPlaceAddress");
+    const newPlaceLat = document.getElementById("newPlaceLat");
+    const newPlaceLon = document.getElementById("newPlaceLon");
+    const newPlacePhone = document.getElementById("newPlacePhone");
+    const useMapCenterBtn = document.getElementById("useMapCenterBtn");
+    const nameCount = document.getElementById("nameCount");
+
+    // Tile Providers (High stability, free, no API key required)
+    const TILE_PROVIDERS = {
+      dark: {
+        url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+        attribution: '&copy; Esri &copy; OpenStreetMap contributors'
+      },
+      streets: {
+        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+        attribution: '&copy; Esri, DeLorme, NAVTEQ, USGS'
+      },
+      satellite: {
+        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        attribution: '&copy; Esri, Maxar, Earthstar Geographics'
+      },
+      osm: {
+        url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }
+    };
+
+    /* ==========================================================================
+       THEME MANAGEMENT (Dark & Light Theme)
+       ========================================================================== */
+    function initTheme() {
+      const savedTheme = localStorage.getItem("vazhikatti_theme") || "dark";
+      applyTheme(savedTheme, false);
+    }
+
+    function applyTheme(theme, updateTiles = true) {
+      const isDark = theme === "dark";
+      document.documentElement.classList.toggle("dark", isDark);
+      localStorage.setItem("vazhikatti_theme", theme);
+
+      if (isDark) {
+        themeIconSun.classList.remove("hidden");
+        themeIconMoon.classList.add("hidden");
+      } else {
+        themeIconSun.classList.add("hidden");
+        themeIconMoon.classList.remove("hidden");
+      }
+
+      if (updateTiles && map) {
+        const targetTile = isDark ? "dark" : "streets";
+        layerSelect.value = targetTile;
+        setMapTileLayer(targetTile);
+      }
+    }
+
+    themeToggleBtn.addEventListener("click", () => {
+      const currentIsDark = document.documentElement.classList.contains("dark");
+      const newTheme = currentIsDark ? "light" : "dark";
+      applyTheme(newTheme, true);
+      showToast(newTheme === "dark" ? "🌙 Dark theme activated" : "☀️ Light theme activated", "info");
+    });
+
+    /* ==========================================================================
+       MAP INITIALIZATION
+       ========================================================================== */
+    function initMap() {
+      const isDark = document.documentElement.classList.contains("dark");
+      const initialTile = isDark ? "dark" : "streets";
+      layerSelect.value = initialTile;
+
+      map = L.map("map", {
+        center: userLocation,
+        zoom: 14,
+        zoomControl: true
+      });
+
+      setMapTileLayer(initialTile);
+      markersLayerGroup = L.layerGroup().addTo(map);
+
+      map.on("moveend", () => {
+        const center = map.getCenter();
+        currentCenter = [center.lat, center.lng];
+        reverseGeocodeCenter(center.lat, center.lng);
+        searchHereBtn.classList.remove("hidden");
+      });
+
+      // Initial Places Load
+      currentPlaces = [...SEED_PLACES];
+      renderPlaces(currentPlaces);
+
+      attemptAutoLocation();
+    }
+
+    function setMapTileLayer(providerKey) {
+      if (currentTileLayer) {
+        map.removeLayer(currentTileLayer);
+      }
+      const conf = TILE_PROVIDERS[providerKey] || TILE_PROVIDERS.dark;
+      currentTileLayer = L.tileLayer(conf.url, {
+        maxZoom: 19,
+        attribution: conf.attribution
+      }).addTo(map);
+    }
+
+    /* ==========================================================================
+       DISTANCE CALCULATION
+       ========================================================================== */
+    function getDistanceKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * (Math.PI / 180);
+      const dLon = (lon2 - lon1) * (Math.PI / 180);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    function formatDistance(distKm) {
+      if (isNaN(distKm)) return "Nearby";
+      if (distKm < 1) {
+        return `${Math.round(distKm * 1000)} m away`;
+      }
+      return `${distKm.toFixed(1)} km away`;
+    }
+
+    /* ==========================================================================
+       RENDER SKELETON LOADING STATE
+       ========================================================================== */
+    function renderSkeletons() {
+      placesList.innerHTML = `
+        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 p-4 shadow-sm flex items-start gap-3">
+          <div class="h-10 w-10 rounded-xl skeleton-shimmer shrink-0"></div>
+          <div class="flex-1 space-y-2">
+            <div class="h-4 w-3/4 rounded-md skeleton-shimmer"></div>
+            <div class="h-3 w-1/2 rounded-md skeleton-shimmer"></div>
+            <div class="h-3 w-1/4 rounded-md skeleton-shimmer"></div>
+          </div>
+        </div>
+        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 p-4 shadow-sm flex items-start gap-3">
+          <div class="h-10 w-10 rounded-xl skeleton-shimmer shrink-0"></div>
+          <div class="flex-1 space-y-2">
+            <div class="h-4 w-2/3 rounded-md skeleton-shimmer"></div>
+            <div class="h-3 w-4/5 rounded-md skeleton-shimmer"></div>
+            <div class="h-3 w-1/3 rounded-md skeleton-shimmer"></div>
+          </div>
+        </div>
+        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 p-4 shadow-sm flex items-start gap-3">
+          <div class="h-10 w-10 rounded-xl skeleton-shimmer shrink-0"></div>
+          <div class="flex-1 space-y-2">
+            <div class="h-4 w-3/5 rounded-md skeleton-shimmer"></div>
+            <div class="h-3 w-2/3 rounded-md skeleton-shimmer"></div>
+            <div class="h-3 w-1/4 rounded-md skeleton-shimmer"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    /* ==========================================================================
+       MAP MARKERS & PLACES LIST RENDERING
+       ========================================================================== */
+    function renderPlaces(places) {
+      markersLayerGroup.clearLayers();
+
+      places.forEach(p => {
+        p.distance = getDistanceKm(currentCenter[0], currentCenter[1], p.lat, p.lon);
+      });
+      places.sort((a, b) => a.distance - b.distance);
+
+      resultCountBadge.textContent = `${places.length} places`;
+      updateCategoryCounts(places);
+
+      // EMPTY STATE MESSAGE WITH ACTION BUTTONS
+      if (places.length === 0) {
+        placesList.innerHTML = `
+          <div class="rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-6 text-center shadow-2xs">
+            <div class="flex h-12 w-12 mx-auto items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500 text-2xl">
+              🔍
+            </div>
+            <h4 class="mt-3 text-sm font-bold text-slate-900 dark:text-white">No places found in this immediate area</h4>
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs mx-auto">
+              We couldn't detect any matching places within your current radius. Try expanding the search radius or resetting filters.
+            </p>
+            <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+              <button onclick="expandRadiusAndSearch()" class="rounded-xl bg-brand-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 transition">
+                Expand to 5.0 km
+              </button>
+              <button onclick="resetCategoryFilter()" class="rounded-xl border border-slate-300 dark:border-slate-700 px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                Show All Places
+              </button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      placesList.innerHTML = "";
+
+      places.forEach((place, index) => {
+        const cat = CATEGORIES[place.type] || {
+          name: place.type,
+          icon: "📍",
+          color: "#10b981"
+        };
+
+        // Create Custom Leaflet Marker
+        const markerElement = document.createElement("div");
+        markerElement.className = "custom-pin";
+        markerElement.style.width = "34px";
+        markerElement.style.height = "34px";
+        markerElement.style.backgroundColor = cat.color;
+        markerElement.innerHTML = `<span>${cat.icon}</span>`;
+
+        const customIcon = L.divIcon({
+          className: "custom-pin-wrapper",
+          html: markerElement,
+          iconSize: [34, 34],
+          iconAnchor: [17, 34],
+          popupAnchor: [0, -32]
+        });
+
+        const marker = L.marker([place.lat, place.lon], { icon: customIcon });
+        const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lon}`;
+
+        marker.bindPopup(`
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
+              <span class="text-base">${cat.icon}</span>
+              <span class="text-sm leading-tight">${place.name}</span>
+            </div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-300 leading-normal">${place.address || "Community verified location"}</p>
+            <div class="pt-1.5 flex items-center justify-between border-t border-slate-100 dark:border-slate-800 text-xs">
+              <span class="font-bold text-slate-700 dark:text-slate-300">📏 ${formatDistance(place.distance)}</span>
+              <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="font-bold text-brand-600 dark:text-brand-400 hover:underline">
+                Get Directions ↗
+              </a>
+            </div>
+          </div>
+        `);
+
+        marker.on("click", () => {
+          showSpotlight(place);
+        });
+
+        markersLayerGroup.addLayer(marker);
+
+        // Create Place Card in List
+        const card = document.createElement("div");
+        card.className = "group relative flex items-start justify-between gap-3 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 bg-white dark:bg-slate-900/90 p-3.5 shadow-2xs transition-all hover:border-brand-500 dark:hover:border-brand-500 hover:shadow-md cursor-pointer";
+        card.innerHTML = `
+          <div class="flex items-start gap-3 flex-1 min-w-0">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl shadow-2xs" style="background-color: ${cat.color}15; color: ${cat.color};">
+              ${cat.icon}
+            </span>
+            <div class="flex-1 min-w-0">
+              <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-brand-500 transition-colors truncate">
+                ${place.name}
+              </h4>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                ${place.address || "Address in vicinity"}
+              </p>
+              <div class="mt-2 flex items-center gap-2 text-[11px]">
+                <span class="rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 font-semibold text-slate-600 dark:text-slate-300">
+                  ${formatDistance(place.distance)}
+                </span>
+                <span class="font-medium text-slate-400 capitalize">• ${cat.name}</span>
+                ${place.custom ? '<span class="rounded-md bg-emerald-500/10 text-emerald-500 font-bold px-1.5 py-0.5 text-[10px]">Added</span>' : ''}
+              </div>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1.5 shrink-0">
+            <button class="view-place-btn rounded-xl bg-brand-50 dark:bg-brand-950/60 px-3 py-1.5 text-xs font-bold text-brand-700 dark:text-brand-300 transition hover:bg-brand-600 hover:text-white dark:hover:bg-brand-600">
+              View
+            </button>
+            <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="text-center rounded-xl bg-slate-100 dark:bg-slate-800 p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition" title="Route in Google Maps">
+              <svg class="h-3.5 w-3.5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+              </svg>
+            </a>
+          </div>
+        `;
+
+        card.addEventListener("click", () => {
+          map.flyTo([place.lat, place.lon], 16, { duration: 0.8 });
+          marker.openPopup();
+          showSpotlight(place);
+        });
+
+        placesList.appendChild(card);
+      });
+    }
+
+    function expandRadiusAndSearch() {
+      radiusSelect.value = "5000";
+      updateRadiusCircle();
+      if (activeCategory) {
+        fetchNearbyPlaces(activeCategory);
+      } else {
+        fetchNearbyPlaces("hospital");
+      }
+    }
+
+    function updateCategoryCounts(places) {
+      const counts = {};
+      Object.keys(CATEGORIES).forEach(k => counts[k] = 0);
+      places.forEach(p => {
+        if (counts[p.type] !== undefined) counts[p.type]++;
+      });
+
+      document.querySelectorAll(".cat-btn").forEach(btn => {
+        const type = btn.dataset.type;
+        const badge = btn.querySelector(".count-badge");
+        if (badge && counts[type] !== undefined) {
+          badge.textContent = counts[type];
+          badge.classList.remove("hidden");
+        }
+      });
+    }
+
+    function showSpotlight(place) {
+      const cat = CATEGORIES[place.type] || { name: place.type, icon: "📍" };
+      spotlightIcon.textContent = cat.icon;
+      spotlightCategory.textContent = cat.name;
+      spotlightName.textContent = place.name;
+      spotlightAddress.textContent = place.address || "Coordinates: " + place.lat.toFixed(4) + ", " + place.lon.toFixed(4);
+      spotlightDistance.textContent = `📏 ${formatDistance(place.distance || getDistanceKm(currentCenter[0], currentCenter[1], place.lat, place.lon))}`;
+      spotlightRouteBtn.href = `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lon}`;
+      spotlight.classList.remove("hidden");
+    }
+
+    closeSpotlightBtn.addEventListener("click", () => {
+      spotlight.classList.add("hidden");
+    });
+
+    /* ==========================================================================
+       USER INPUT VALIDATION: SEARCH FORM
+       ========================================================================== */
+    function validateSearchInput(value) {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return { valid: false, message: "Please enter a location, city, or place name." };
+      }
+      if (trimmed.length < 2) {
+        return { valid: false, message: "Search term must be at least 2 characters long." };
+      }
+      if (/[<>{}]/.test(trimmed)) {
+        return { valid: false, message: "Search query contains unsupported characters." };
+      }
+      return { valid: true, message: "" };
+    }
+
+    searchInput.addEventListener("input", () => {
+      const val = searchInput.value;
+      searchCharCount.textContent = `${val.length}/60`;
+      clearSearchBtn.classList.toggle("hidden", !val);
+
+      if (val.length > 0) {
+        const check = validateSearchInput(val);
+        if (!check.valid) {
+          searchValidationText.textContent = check.message;
+          searchValidationMsg.classList.remove("hidden");
+          searchInput.classList.add("border-rose-500", "focus:border-rose-500", "focus:ring-rose-500/20");
+        } else {
+          searchValidationMsg.classList.add("hidden");
+          searchInput.classList.remove("border-rose-500", "focus:border-rose-500", "focus:ring-rose-500/20");
+        }
+      } else {
+        searchValidationMsg.classList.add("hidden");
+        searchInput.classList.remove("border-rose-500", "focus:border-rose-500", "focus:ring-rose-500/20");
+      }
+    });
+
+    clearSearchBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      searchCharCount.textContent = "0/60";
+      clearSearchBtn.classList.add("hidden");
+      searchValidationMsg.classList.add("hidden");
+      searchInput.classList.remove("border-rose-500");
+      searchInput.focus();
+    });
+
+    searchForm.addEventListener("submit", e => {
+      e.preventDefault();
+      const query = searchInput.value.trim();
+      const validation = validateSearchInput(query);
+
+      if (!validation.valid) {
+        searchValidationText.textContent = validation.message;
+        searchValidationMsg.classList.remove("hidden");
+        searchInput.classList.add("shake", "border-rose-500");
+        setTimeout(() => searchInput.classList.remove("shake"), 400);
+        showToast(validation.message, "warning");
+        return;
+      }
+
+      searchValidationMsg.classList.add("hidden");
+      searchInput.classList.remove("border-rose-500");
+      searchLocation(query);
+    });
+
+    /* ==========================================================================
+       API 1: NOMINATIM GEOCODING (With Loading & Error States)
+       ========================================================================== */
+    async function searchLocation(query) {
+      if (!query) return;
+
+      // Loading State for Search Button
+      searchSubmitBtn.disabled = true;
+      searchBtnSpinner.classList.remove("hidden");
+      searchBtnIcon.classList.add("hidden");
+      searchBtnText.textContent = "Searching...";
+      showLoader(`Searching OpenStreetMap for "${query}"...`);
+      setStatus(`Locating "${query}" on global map...`);
+
+      try {
+        const endpoint = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=${encodeURIComponent(query)}`;
+        const response = await fetch(endpoint, {
+          headers: { "Accept": "application/json" }
+        });
+
+        if (!response.ok) throw new Error("Search service temporarily unavailable.");
+        const results = await response.json();
+
+        if (!results || results.length === 0) {
+          setStatus(`No locations found for "${query}". Try another search term.`, true);
+          showToast(`No locations found matching "${query}"`, "warning");
+          hideLoader();
+          return;
+        }
+
+        const top = results[0];
+        const newLat = parseFloat(top.lat);
+        const newLon = parseFloat(top.lon);
+
+        currentCenter = [newLat, newLon];
+        map.flyTo([newLat, newLon], 14, { duration: 1.2 });
+        mapCenterLabel.textContent = top.display_name.split(",")[0] || top.display_name;
+
+        setStatus(`Moved map to ${top.display_name}. Scanning essentials...`);
+        showToast(`Map centered on ${top.display_name.split(",")[0]}`, "success");
+        updateRadiusCircle();
+
+        if (activeCategory) {
+          await fetchNearbyPlaces(activeCategory);
+        } else {
+          await fetchNearbyPlaces("hospital");
+        }
+      } catch (err) {
+        console.error("Geocoding Error:", err);
+        setStatus("Could not search location. Check your internet connection.", true);
+        showToast("Search failed. Check network or try again.", "error");
+      } finally {
+        searchSubmitBtn.disabled = false;
+        searchBtnSpinner.classList.add("hidden");
+        searchBtnIcon.classList.remove("hidden");
+        searchBtnText.textContent = "Search";
+        hideLoader();
+      }
+    }
+
+    /* ==========================================================================
+       API 2: REVERSE GEOCODING
+       ========================================================================== */
+    async function reverseGeocodeCenter(lat, lon) {
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`, {
+          headers: { "Accept": "application/json" }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const name = data.address?.city || data.address?.town || data.address?.suburb || data.address?.county || data.display_name.split(",")[0];
+          mapCenterLabel.textContent = `📍 ${name || 'Map Viewport'}`;
+        }
+      } catch (e) {
+        mapCenterLabel.textContent = `📍 ${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+      }
+    }
+
+    /* ==========================================================================
+       API 3: OVERPASS POI & NOMINATIM PLACES FETCHING (With Skeletons & Retry)
+       ========================================================================== */
+    async function fetchNearbyPlaces(categoryKey) {
+      if (!categoryKey || !CATEGORIES[categoryKey]) return;
+      activeCategory = categoryKey;
+      const catConfig = CATEGORIES[categoryKey];
+
+      updateCategoryUI(categoryKey);
+      const radius = parseInt(radiusSelect.value) || 3000;
+      const [lat, lon] = currentCenter;
+
+      updateRadiusCircle();
+      showLoader(`Scanning live ${catConfig.name} (${radius/1000}km)...`);
+      setStatus(`Scanning OpenStreetMap for nearby ${catConfig.name.toLowerCase()}...`);
+      renderSkeletons();
+
+      // 1. Overpass API
+      try {
+        const overpassQuery = `[out:json][timeout:10];node${catConfig.overpassQuery}(around:${radius},${lat},${lon});out body 35;`;
+        const overpassUrl = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5500);
+
+        const response = await fetch(overpassUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.elements && data.elements.length > 0) {
+            const mapped = data.elements.map((el, i) => {
+              const tags = el.tags || {};
+              const placeName = tags.name || tags["name:en"] || `${catConfig.name} Facility #${i+1}`;
+              const street = tags["addr:street"] || tags["addr:suburb"] || tags["addr:city"] || "";
+              return {
+                id: `osm-${el.id}`,
+                name: placeName,
+                type: categoryKey,
+                lat: el.lat,
+                lon: el.lon,
+                address: street ? `${street}, Near Map Center` : `Located near ${mapCenterLabel.textContent.replace('📍 ', '')}`
+              };
+            });
+
+            currentPlaces = mapped;
+            renderPlaces(currentPlaces);
+            setStatus(`Found ${mapped.length} ${catConfig.name.toLowerCase()} via Overpass API.`);
+            showToast(`Loaded ${mapped.length} live ${catConfig.name}`, "success");
+            hideLoader();
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("Overpass API slow, falling back to Nominatim...", e);
+      }
+
+      // 2. Nominatim Places API
+      try {
+        const nomQuery = `${catConfig.nominatimQuery} near ${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+        const nomUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=25&q=${encodeURIComponent(nomQuery)}`;
+        const nomRes = await fetch(nomUrl);
+
+        if (nomRes.ok) {
+          const nomData = await nomRes.json();
+          if (nomData && nomData.length > 0) {
+            const mapped = nomData.map((item, idx) => ({
+              id: `nom-${item.place_id || idx}`,
+              name: item.name || item.display_name.split(",")[0],
+              type: categoryKey,
+              lat: parseFloat(item.lat),
+              lon: parseFloat(item.lon),
+              address: item.display_name
+            }));
+
+            currentPlaces = mapped;
+            renderPlaces(currentPlaces);
+            setStatus(`Found ${mapped.length} ${catConfig.name.toLowerCase()} via Nominatim Places API.`);
+            showToast(`Loaded ${mapped.length} ${catConfig.name}`, "success");
+            hideLoader();
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Nominatim fallback error:", err);
+      }
+
+      // 3. Fallback: Seed Dataset
+      const fallbackList = SEED_PLACES.filter(p => p.type === categoryKey);
+      currentPlaces = fallbackList;
+      renderPlaces(currentPlaces);
+      setStatus(`Showing ${currentPlaces.length} verified places (offline mode enabled).`);
+      showToast("Live network limited, loaded verified offline backup", "info");
+      hideLoader();
+    }
+
+    function updateCategoryUI(categoryKey) {
+      const catConfig = CATEGORIES[categoryKey];
+
+      document.querySelectorAll(".cat-btn").forEach(btn => {
+        const isMatch = btn.dataset.type === categoryKey;
+        btn.classList.toggle("ring-2", isMatch);
+        btn.classList.toggle("ring-brand-500", isMatch);
+        btn.classList.toggle("bg-brand-50/40", isMatch);
+        btn.classList.toggle("dark:bg-brand-950/40", isMatch);
+      });
+
+      if (catConfig) {
+        activePillIcon.textContent = catConfig.icon;
+        activePillText.textContent = catConfig.name;
+        activeCategoryPill.classList.remove("hidden");
+        activeCategoryPill.classList.add("flex");
+        showAllBtn.classList.remove("hidden");
+      }
+    }
+
+    function resetCategoryFilter() {
+      activeCategory = null;
+      activeCategoryPill.classList.add("hidden");
+      activeCategoryPill.classList.remove("flex");
+      showAllBtn.classList.add("hidden");
+
+      document.querySelectorAll(".cat-btn").forEach(btn => {
+        btn.classList.remove("ring-2", "ring-brand-500", "bg-brand-50/40", "dark:bg-brand-950/40");
+      });
+
+      currentPlaces = [...SEED_PLACES];
+      renderPlaces(currentPlaces);
+      setStatus("Showing all verified essential places. Select a category for live scan.");
+    }
+
+    /* ==========================================================================
+       USER INPUT MODAL FORM VALIDATION: "ADD PLACE"
+       ========================================================================== */
+    openAddModalBtn.addEventListener("click", () => {
+      // Pre-fill coordinates from current map center
+      newPlaceLat.value = currentCenter[0].toFixed(5);
+      newPlaceLon.value = currentCenter[1].toFixed(5);
+      addPlaceModal.classList.remove("hidden");
+    });
+
+    closeAddModalBtn.addEventListener("click", () => addPlaceModal.classList.add("hidden"));
+    cancelAddBtn.addEventListener("click", () => addPlaceModal.classList.add("hidden"));
+
+    useMapCenterBtn.addEventListener("click", () => {
+      newPlaceLat.value = currentCenter[0].toFixed(5);
+      newPlaceLon.value = currentCenter[1].toFixed(5);
+      showToast("Coordinates populated from current map center", "info");
+    });
+
+    newPlaceName.addEventListener("input", () => {
+      nameCount.textContent = `${newPlaceName.value.length}/60`;
+    });
+
+    addPlaceForm.addEventListener("submit", async e => {
+      e.preventDefault();
+
+      const nameVal = newPlaceName.value.trim();
+      const catVal = newPlaceCategory.value;
+      const addrVal = newPlaceAddress.value.trim();
+      const latVal = parseFloat(newPlaceLat.value);
+      const lonVal = parseFloat(newPlaceLon.value);
+      const phoneVal = newPlacePhone.value.trim();
+
+      let hasError = false;
+
+      // Validate Name
+      if (nameVal.length < 3) {
+        document.getElementById("nameError").classList.remove("hidden");
+        newPlaceName.classList.add("border-rose-500");
+        hasError = true;
+      } else {
+        document.getElementById("nameError").classList.add("hidden");
+        newPlaceName.classList.remove("border-rose-500");
+      }
+
+      // Validate Category
+      if (!catVal) {
+        document.getElementById("categoryError").classList.remove("hidden");
+        newPlaceCategory.classList.add("border-rose-500");
+        hasError = true;
+      } else {
+        document.getElementById("categoryError").classList.add("hidden");
+        newPlaceCategory.classList.remove("border-rose-500");
+      }
+
+      // Validate Address
+      if (addrVal.length < 5) {
+        document.getElementById("addressError").classList.remove("hidden");
+        newPlaceAddress.classList.add("border-rose-500");
+        hasError = true;
+      } else {
+        document.getElementById("addressError").classList.add("hidden");
+        newPlaceAddress.classList.remove("border-rose-500");
+      }
+
+      // Validate Coordinates
+      if (isNaN(latVal) || isNaN(lonVal) || latVal < -90 || latVal > 90 || lonVal < -180 || lonVal > 180) {
+        document.getElementById("coordsError").classList.remove("hidden");
+        newPlaceLat.classList.add("border-rose-500");
+        newPlaceLon.classList.add("border-rose-500");
+        hasError = true;
+      } else {
+        document.getElementById("coordsError").classList.add("hidden");
+        newPlaceLat.classList.remove("border-rose-500");
+        newPlaceLon.classList.remove("border-rose-500");
+      }
+
+      // Validate Phone (if provided)
+      if (phoneVal && !/^[+0-9\s-]{6,15}$/.test(phoneVal)) {
+        document.getElementById("phoneError").classList.remove("hidden");
+        newPlacePhone.classList.add("border-rose-500");
+        hasError = true;
+      } else {
+        document.getElementById("phoneError").classList.add("hidden");
+        newPlacePhone.classList.remove("border-rose-500");
+      }
+
+      if (hasError) {
+        showToast("Please correct the highlighted form errors.", "error");
+        return;
+      }
+
+      // Loading State during submission
+      const submitBtn = document.getElementById("submitPlaceBtn");
+      const submitSpinner = document.getElementById("submitSpinner");
+      submitBtn.disabled = true;
+      submitSpinner.classList.remove("hidden");
+
+      // Simulate async publishing / validation
+      await new Promise(r => setTimeout(r, 600));
+
+      const newPlace = {
+        id: `user-${Date.now()}`,
+        name: nameVal,
+        type: catVal,
+        lat: latVal,
+        lon: lonVal,
+        address: addrVal,
+        custom: true
+      };
+
+      // Add to places array and seed list
+      SEED_PLACES.unshift(newPlace);
+      currentPlaces.unshift(newPlace);
+
+      // Reset form and close modal
+      addPlaceForm.reset();
+      nameCount.textContent = "0/60";
+      submitBtn.disabled = false;
+      submitSpinner.classList.add("hidden");
+      addPlaceModal.classList.add("hidden");
+
+      // Fly to the new place and render
+      map.flyTo([latVal, lonVal], 16, { duration: 1.2 });
+      renderPlaces(currentPlaces);
+      showSpotlight(newPlace);
+
+      showToast(`🎉 "${nameVal}" has been added to the map!`, "success");
+    });
+
+    /* ==========================================================================
+       TOAST NOTIFICATION ENGINE
+       ========================================================================== */
+    function showToast(message, type = "info") {
+      const container = document.getElementById("toastContainer");
+      const toast = document.createElement("div");
+      toast.className = "pointer-events-auto toast-enter flex items-center gap-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 shadow-xl text-xs font-semibold max-w-sm transition-all";
+
+      let icon = "ℹ️";
+      let borderAccent = "border-l-4 border-l-blue-500";
+      if (type === "success") {
+        icon = "✅";
+        borderAccent = "border-l-4 border-l-emerald-500";
+      } else if (type === "warning") {
+        icon = "⚠️";
+        borderAccent = "border-l-4 border-l-amber-500";
+      } else if (type === "error") {
+        icon = "❌";
+        borderAccent = "border-l-4 border-l-rose-500";
+      }
+
+      toast.className += ` ${borderAccent}`;
+      toast.innerHTML = `
+        <span class="text-base">${icon}</span>
+        <span class="flex-1 text-slate-800 dark:text-slate-100">${message}</span>
+        <button class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-base leading-none pl-1">×</button>
+      `;
+
+      toast.querySelector("button").addEventListener("click", () => toast.remove());
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(10px)";
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    /* ==========================================================================
+       GEOLOCATION (HTML5 + IP Fallback)
+       ========================================================================== */
+    function locateUser() {
+      if (!navigator.geolocation) {
+        setStatus("Geolocation not supported by browser. Using IP...", true);
+        fallbackIpLocation();
+        return;
+      }
+
+      showLoader("Acquiring GPS coordinates...");
+      setStatus("Requesting GPS location permission...");
+
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          userLocation = [lat, lon];
+          currentCenter = [lat, lon];
+
+          map.flyTo(userLocation, 15, { duration: 1.2 });
+
+          if (userMarker) map.removeLayer(userMarker);
+          const pulseIcon = L.divIcon({
+            className: "user-pulse-marker",
+            iconSize: [22, 22],
+            iconAnchor: [11, 11]
+          });
+
+          userMarker = L.marker(userLocation, { icon: pulseIcon }).addTo(map)
+            .bindPopup("<strong>📍 You Are Here</strong><br><span class='text-xs text-slate-400'>Live GPS Position</span>")
+            .openPopup();
+
+          updateRadiusCircle();
+          reverseGeocodeCenter(lat, lon);
+          setStatus("Centered on your live GPS location.");
+          showToast("Centered on your GPS location", "success");
+          hideLoader();
+
+          fetchNearbyPlaces(activeCategory || "hospital");
+        },
+        error => {
+          console.warn("GPS error:", error.message);
+          setStatus("GPS unavailable. Locating city via IP...", true);
+          showToast("GPS unavailable. Detecting city via IP network...", "warning");
+          fallbackIpLocation();
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+
+    async function fallbackIpLocation() {
+      try {
+        const response = await fetch("https://ipapi.co/json/");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.latitude && data.longitude) {
+            userLocation = [data.latitude, data.longitude];
+            currentCenter = [data.latitude, data.longitude];
+            map.flyTo(userLocation, 13, { duration: 1.2 });
+            mapCenterLabel.textContent = `📍 ${data.city || data.region || 'Your Area'}`;
+            setStatus(`Located near ${data.city}, ${data.region}. Choose a category to scan.`);
+            updateRadiusCircle();
+            hideLoader();
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("IP Geolocation fallback failed:", e);
+      }
+      setStatus("Default location loaded (Chennai). Search any city above.", false);
+      hideLoader();
+    }
+
+    function attemptAutoLocation() {
+      if (navigator.geolocation) {
+        navigator.permissions?.query({ name: "geolocation" }).then(res => {
+          if (res.state === "granted") {
+            locateUser();
+          } else {
+            fallbackIpLocation();
+          }
+        }).catch(() => fallbackIpLocation());
+      } else {
+        fallbackIpLocation();
+      }
+    }
+
+    function updateRadiusCircle() {
+      const radius = parseInt(radiusSelect.value) || 3000;
+      if (searchRadiusCircle) {
+        map.removeLayer(searchRadiusCircle);
+      }
+      searchRadiusCircle = L.circle(currentCenter, {
+        radius: radius,
+        color: "#10b981",
+        fillColor: "#10b981",
+        fillOpacity: 0.08,
+        weight: 1.5,
+        dashArray: "6, 6"
+      }).addTo(map);
+    }
+
+    /* ==========================================================================
+       UI HELPERS
+       ========================================================================== */
+    function setStatus(msg, isError = false) {
+      statusMessage.textContent = msg;
+      if (isError) {
+        statusPulse.className = "h-2 w-2 rounded-full bg-rose-500";
+      } else {
+        statusPulse.className = "h-2 w-2 rounded-full bg-emerald-500 animate-pulse";
+      }
+    }
+
+    function showLoader(text = "Loading...") {
+      mapLoaderText.textContent = text;
+      mapLoader.classList.remove("hidden");
+    }
+
+    function hideLoader() {
+      mapLoader.classList.add("hidden");
+    }
+
+    /* ==========================================================================
+       EVENT LISTENERS
+       ========================================================================== */
+    // Quick City Chips
+    document.querySelectorAll(".city-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const city = chip.dataset.city;
+        searchInput.value = city;
+        searchCharCount.textContent = `${city.length}/60`;
+        clearSearchBtn.classList.remove("hidden");
+        searchValidationMsg.classList.add("hidden");
+        searchInput.classList.remove("border-rose-500");
+        searchLocation(city);
+      });
+    });
+
+    // Category Button Clicks
+    document.querySelectorAll(".cat-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const type = btn.dataset.type;
+        fetchNearbyPlaces(type);
+      });
+    });
+
+    // Reset Category
+    resetCategoryBtn.addEventListener("click", resetCategoryFilter);
+    showAllBtn.addEventListener("click", resetCategoryFilter);
+
+    // Map Layer Switcher
+    layerSelect.addEventListener("change", e => {
+      setMapTileLayer(e.target.value);
+    });
+
+    // Radius Selector Change
+    radiusSelect.addEventListener("change", () => {
+      updateRadiusCircle();
+      if (activeCategory) {
+        fetchNearbyPlaces(activeCategory);
+      }
+    });
+
+    // Locate Me Button
+    locateBtn.addEventListener("click", locateUser);
+
+    // Scan This Map Area Button
+    searchHereBtn.addEventListener("click", () => {
+      searchHereBtn.classList.add("hidden");
+      if (activeCategory) {
+        fetchNearbyPlaces(activeCategory);
+      } else {
+        fetchNearbyPlaces("hospital");
+      }
+    });
+
+    // Resize Handler
+    window.addEventListener("resize", () => {
+      if (map) map.invalidateSize();
+    });
+
+    // Initialize App & Theme on Load
+    window.addEventListener("DOMContentLoaded", () => {
+      initTheme();
+      initMap();
+    });
+  </script>
+</body>
+</html>
